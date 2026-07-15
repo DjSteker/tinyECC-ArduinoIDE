@@ -6,7 +6,7 @@
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/ShubhamAnnigeri/tinyECC-ArduinoIDE"
+    "url": "https://github.com/DjSteker/tinyECC-ArduinoIDE"
   },
   "frameworks": "arduino",
   "platforms": "atmelavr, espressif8266, espressif32",
@@ -14,11 +14,15 @@
   [
         { 
             "name": "Shubham Annigeri",
-            "url": "https://github.com/ShubhamAnnigeri"
+            "url": "https://github.com/DjSteker/tinyECC-ArduinoIDE"
         },
         { 
             "name": "Sunit Raut",
             "url": "https://github.com/SunitRaut"
+        },
+            { 
+            "name": "DjSteker",
+            "url": "https://github.com/DjSteker"
         }
   ]
 }
