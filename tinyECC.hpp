@@ -2,7 +2,7 @@
  * tinyECC.hpp
  *
  *  Created on: 15 jul 2026
- *      Author: usuario001
+ *      Author: DjSteker
  */
 
 #ifndef TINYECC_HPP_
