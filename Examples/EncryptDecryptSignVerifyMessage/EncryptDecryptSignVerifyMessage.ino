@@ -15,7 +15,7 @@ tinyECC ecc;
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
-    ; /* Esperar conexión serial (Leonardo/Micro) */
+    ; /* Esperar conexión serial */
   }
 
   Serial.println(F("=== tinyECC Demo en Arduino ==="));
