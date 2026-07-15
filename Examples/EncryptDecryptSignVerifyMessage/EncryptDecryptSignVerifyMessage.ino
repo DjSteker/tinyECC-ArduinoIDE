@@ -3,7 +3,7 @@
  * Cifra, descifra, firma y verifica un mensaje usando ECC sobre GF(991)
  */
 
-#include "tinyECC.hpp"
+#include <tinyECC.hpp>
 
 tinyECC ecc;
 
