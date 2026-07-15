@@ -36,7 +36,7 @@
   #include <cstdint>
 #endif
 
-#include "tinyECC_mapping_table.hpp"
+#include <tinyECC_mapping_table.hpp>
 
 /* ---------- Tipo de texto portable ---------- */
 #ifdef ARDUINO
