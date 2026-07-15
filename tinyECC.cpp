@@ -1,34 +1,38 @@
+/*
+ * tinyECC.cpp
+ *
+ *  Created on: 15 jul 2026
+ *      Author: usuario001
+ */
+
 // **********************************************************************************
 // Author: Shubham Annigeri	github.com/ShubhamAnnigeri
 // co-Author: Sunit Raut   	github.com/SunitRaut
-// co-Author: DjSteker   	github.com/DjSteker
 // **********************************************************************************
 // License
 // **********************************************************************************
-// This program is free software; you can redistribute it 
-// and/or modify it under the terms of the GNU General    
-// Public License as published by the Free Software       
-// Foundation; either version 3 of the License, or        
-// (at your option) any later version.                    
-//                                                        
-// This program is distributed in the hope that it will   
-// be useful, but WITHOUT ANY WARRANTY; without even the  
-// implied warranty of MERCHANTABILITY or FITNESS FOR A   
-// PARTICULAR PURPOSE. See the GNU General Public        
-// License for more details.                              
-//                                                        
-// Licence can be viewed at                               
+// This program is free software; you can redistribute it
+// and/or modify it under the terms of the GNU General
+// Public License as published by the Free Software
+// Foundation; either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will
+// be useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU General Public
+// License for more details.
+//
+// Licence can be viewed at
 // http://www.gnu.org/licenses/gpl-3.0.txt
 //
 // Please maintain this license information along with authorship
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
 
+#include "tinyECC.hpp"
 
-
-#include <tinyECC.h>
-
-/* Tabla estática de mapeo */
+/* Tabla estática de mapeo - SIN PROGMEM para simplicidad */
 static const int alpha_table[MAPPING_TABLE_SIZE] = MAPPING_TABLE_DATA;
 
 const int* tinyECC::alphaTable() {
@@ -36,11 +40,11 @@ const int* tinyECC::alphaTable() {
 }
 
 int tinyECC::alphaAt(int index) {
-#if defined(ARDUINO_ARCH_AVR) || defined(__AVR__)
-    return pgm_read_word(&alpha_table[index]);
-#else
+    // Verificar límites para debug
+    if (index < 0 || index >= MAPPING_TABLE_SIZE) {
+        return 0;
+    }
     return alpha_table[index];
-#endif
 }
 
 /* ==================== Constructor ==================== */
@@ -70,7 +74,11 @@ tinyECC::tinyECC() {
 
 void tinyECC::eccSrand() {
 #ifdef ARDUINO
-    randomSeed(analogRead(A0));
+    unsigned long seed = analogRead(A0);
+    #ifdef A1
+    seed = (seed << 8) | analogRead(A1);
+    #endif
+    randomSeed(seed);
 #else
     std::srand(static_cast<unsigned>(time(nullptr)));
 #endif
@@ -98,10 +106,23 @@ void tinyECC::encrypt() {
 
     unsigned int len = plaintext.length();
     for (unsigned int i = 0; i < len; i++) {
-        uint8_t x = static_cast<uint8_t>(plaintext[i]);
+        int x = static_cast<uint8_t>(plaintext[i]);
 
-        if (MAPPING_TABLE_SIZE == 20) {   /* tabla de dígitos 0-9 */
-            x = static_cast<uint8_t>(plaintext[i] - '0');
+        int halfTable = MAPPING_TABLE_SIZE / 2;
+
+        if (MAPPING_TABLE_SIZE == 20) {
+            // Solo dígitos '0'-'9'
+            if (plaintext[i] >= '0' && plaintext[i] <= '9') {
+                x = plaintext[i] - '0';
+            } else {
+                // Caracter no soportado, saltar o reemplazar
+                continue;
+            }
+        } else {
+            // Tabla de 128 o 256 caracteres
+            if (x >= halfTable) {
+                continue;  // Fuera de rango
+            }
         }
 
         m = (m + x) % 50;
@@ -142,7 +163,6 @@ void tinyECC::decrypt() {
                 break;
             }
             if (c == '-') {
-                /* manejar negativos (no debería ocurrir pero por seguridad) */
                 k++;
                 continue;
             }
@@ -164,9 +184,8 @@ void tinyECC::decrypt() {
             P[2] = valores[2];
             P[3] = valores[3];
 
-            decode();  /* resultado en E[0], E[1] */
+            decode();
 
-            /* Buscar punto en la tabla */
             bool found = false;
             int half = MAPPING_TABLE_SIZE / 2;
             for (int j = 0; j < half; j++) {
@@ -183,12 +202,7 @@ void tinyECC::decrypt() {
             }
 
             if (!found) {
-                /* Caracter no encontrado en la tabla */
-#ifdef ARDUINO
                 plaintext += '?';
-#else
-                plaintext += '?';
-#endif
             }
         }
         idx++;
@@ -207,9 +221,9 @@ void tinyECC::encode(int msg[2], int pb[2], int pbase[2]) {
         int temp1[2];
         int k = 0;
 #ifdef ARDUINO
-        k = random(50);
+        k = random(1, 49);
 #else
-        k = rand() % 50;
+        k = (rand() % 48) + 1;
 #endif
 
         TempArr[0] = PubKey[0];
@@ -219,13 +233,12 @@ void tinyECC::encode(int msg[2], int pb[2], int pbase[2]) {
         temp1[1] = E[1];
 
         add(msg, temp1);
-        E[2] = E[0];   /* C2 = msg + k*PubKey */
+        E[2] = E[0];
         E[3] = E[1];
 
         TempArr[0] = Pbase[0];
         TempArr[1] = Pbase[1];
         sclr_mult(k, TempArr);
-        /* E[0],E[1] ya tienen C1 = k*Pbase */
 
     } while ((E[0] == 0) || (E[1] == 0) || (E[2] == 0) || (E[3] == 0));
 }
@@ -237,19 +250,16 @@ void tinyECC::decode() {
 
     int pt1[2], pt2[2], buf[2];
 
-    pt1[0] = P[0];   /* C1 */
+    pt1[0] = P[0];
     pt1[1] = P[1];
-    pt2[0] = P[2];   /* C2 */
+    pt2[0] = P[2];
     pt2[1] = P[3];
 
-    /* Calcular PrivKey * C1 */
     sclr_mult(PrivKey, pt1);
     buf[0] = E[0];
-    buf[1] = p - E[1];   /* Negar el punto */
+    buf[1] = p - E[1];  // Negar el punto
 
-    /* M = C2 + (-PrivKey*C1) */
     add(pt2, buf);
-    /* Resultado en E[0], E[1] */
 }
 
 /* ==================== Scalar Multiply ==================== */
@@ -259,7 +269,6 @@ void tinyECC::sclr_mult(int k, int pt[2]) {
     Pcur[0] = pt[0];
     Pcur[1] = pt[1];
 
-    /* Encontrar el MSB */
     int msb = -1;
     for (int i = 31; i >= 0; i--) {
         if ((k >> i) & 1) {
@@ -269,7 +278,6 @@ void tinyECC::sclr_mult(int k, int pt[2]) {
     }
 
     if (msb < 0) {
-        /* k == 0 => PAI */
         E[0] = 0;
         E[1] = 0;
         return;
@@ -301,21 +309,16 @@ void tinyECC::add(int pt1[2], int pt2[2]) {
     B[0] = pt2[0];
     B[1] = pt2[1];
 
-    /* PAI + PAI = PAI */
     if (isPAI(pt1) && isPAI(pt2)) {
-        E[0] = 0;
-        E[1] = 0;
         return;
     }
 
-    /* PAI + Q = Q */
     if (pt1[0] == 0 && pt1[1] == 0) {
         E[0] = pt2[0];
         E[1] = pt2[1];
         return;
     }
 
-    /* P + PAI = P */
     if (pt2[0] == 0 && pt2[1] == 0) {
         E[0] = pt1[0];
         E[1] = pt1[1];
@@ -326,10 +329,7 @@ void tinyECC::add(int pt1[2], int pt2[2]) {
     long int rx = 0, ry = 0;
 
     if ((A[0] == B[0]) && (A[1] == B[1])) {
-        /* Point doubling */
         if (A[1] % p == 0) {
-            E[0] = 0;
-            E[1] = 0;
             return;
         }
         slope = ((3 * (A[0] * A[0])) + a) * inverse(2 * A[1]);
@@ -337,9 +337,6 @@ void tinyECC::add(int pt1[2], int pt2[2]) {
         ry = ((slope * (A[0] - rx)) - A[1]) % p;
     } else {
         if ((B[0] - A[0]) % p == 0) {
-            /* Secante vertical => PAI */
-            E[0] = 0;
-            E[1] = 0;
             return;
         }
         slope = (B[1] - A[1]) * inverse(B[0] - A[0]);
@@ -347,18 +344,14 @@ void tinyECC::add(int pt1[2], int pt2[2]) {
         ry = ((slope * (A[0] - rx)) - A[1]) % p;
     }
 
-    if (rx < 0) {
-        rx = p + rx;
-    }
-    if (ry < 0) {
-        ry = p + ry;
-    }
+    if (rx < 0) rx = p + rx;
+    if (ry < 0) ry = p + ry;
 
     E[0] = static_cast<int>(rx);
     E[1] = static_cast<int>(ry);
 }
 
-/* ==================== Signature (ECDSA-like) ==================== */
+/* ==================== Signature ==================== */
 void tinyECC::genSig() {
     int n = 997;
     int s = 0;
@@ -372,17 +365,16 @@ void tinyECC::genSig() {
 
     while (s == 0 || x == 0) {
 #ifdef ARDUINO
-        k = random(1, p - 1);
+        k = random(1, n - 1);
 #else
-        k = (rand() % (p - 2)) + 1;
+        k = (rand() % (n - 2)) + 1;
 #endif
 
         TempArr[0] = Pbase[0];
         TempArr[1] = Pbase[1];
         sclr_mult(k, TempArr);
 
-        x = E[0] % n;   /* r */
-
+        x = E[0] % n;
         e = m % n;
 
         long int ki = inverse1(k);
@@ -392,17 +384,18 @@ void tinyECC::genSig() {
         s = static_cast<int>(buf);
     }
 
-    Sig[0] = x;   /* r */
-    Sig[1] = s;   /* s */
+    Sig[0] = x;
+    Sig[1] = s;
 }
 
+// ✅ CORREGIDO: Validación correcta con n, no p
 bool tinyECC::verifySig() {
     int n = 997;
 
     int r = Sig[0];
     int s = Sig[1];
 
-    if (r >= p || s >= p) {
+    if (r < 1 || r >= n || s < 1 || s >= n) {
         return false;
     }
 
@@ -412,7 +405,6 @@ bool tinyECC::verifySig() {
     long int u1 = (e * w) % n;
     long int u2 = (r * w) % n;
 
-    /* u1 * Pbase */
     TempArr[0] = PbaseSer[0];
     TempArr[1] = PbaseSer[1];
     sclr_mult(static_cast<int>(u1), TempArr);
@@ -420,7 +412,6 @@ bool tinyECC::verifySig() {
     P1[0] = E[0];
     P1[1] = E[1];
 
-    /* u2 * PubKey */
     TempArr[0] = PubKey[0];
     TempArr[1] = PubKey[1];
     sclr_mult(static_cast<int>(u2), TempArr);
@@ -437,11 +428,7 @@ bool tinyECC::verifySig() {
         return false;
     }
 
-    if (P3[0] == r) {
-        return true;
-    }
-
-    return false;
+    return (P3[0] % n == r);
 }
 
 /* ==================== Utilidades ==================== */
@@ -453,6 +440,7 @@ long int tinyECC::inverse(long int num) {
     if (num < 0) {
         num = p + num;
     }
+    num = num % p;
     for (int i = 1; i < p; i++) {
         if (((num * i) % p) == 1) {
             return i;
@@ -463,15 +451,14 @@ long int tinyECC::inverse(long int num) {
 
 int tinyECC::inverse1(int num) {
     long int n = 997;
-    int x = num;
     if (num < 0) {
-        num = n + num;
+        num = static_cast<int>(n + num);
     }
+    num = num % static_cast<int>(n);
     for (int i = 1; i < n; i++) {
-        if (((x * i) % n) == 1) {
+        if (((num * i) % n) == 1) {
             return i;
         }
     }
     return 0;
 }
-
