@@ -47,11 +47,19 @@
 
 class tinyECC {
 public:
+    // Curva expuesta públicamente
     int a, b, p;
     
+    // Datos de entrada/salida
     ECCString plaintext;
     ECCString ciphertext;
     int Sig[2];
+    
+    // Claves accesibles para debug/inspección (public ahora)
+    int PrivKey;
+    int PubKey[2];
+    int Pbase[2];
+    int m;  // Hash interno para debugging
 
     tinyECC();
     void encrypt();
@@ -64,16 +72,11 @@ public:
     void setKeys(int privKey, int pubX, int pubY, int baseX, int baseY);
 
 protected:
-
-    int PrivKey;
-    int PubKey[2];
-    int Pbase[2];
     int PubSer[2];
     int PbaseSer[2];
     int TempArr[2];
     int E[4];
     int P[4];
-    int m;
 
     void encode(int msg[2], int pb[2], int pbase[2]);
     void sclr_mult(int k, int pt[2]);
