@@ -2,7 +2,7 @@
  * tinyECC_mapping_table.hpp
  *
  *  Created on: 15 jul 2026
- *      Author: usuario001
+ *      Author: DjSteker 
  */
 
 #ifndef TINYECC_MAPPING_TABLE_HPP_
