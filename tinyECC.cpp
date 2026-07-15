@@ -308,6 +308,7 @@ void tinyECC::sclr_mult(int k, int pt[2]) {
 }
 
 /* ==================== Point Addition ==================== */
+/* ==================== Point Addition ==================== */
 void tinyECC::add(int pt1[2], int pt2[2]) {
 	E[0] = 0;
 	E[1] = 0;
@@ -400,9 +401,12 @@ void tinyECC::genSig() {
 		e = m % n;
 
 		long int ki = inverse1(k);
-		long int bi = (e + (PrivKey * x));
 
-		buf = (ki * bi) % n;
+		// FORZAR 32 bits: (long int)PrivKey * x
+		long int bi = (e + ((long int) PrivKey * x));
+
+		// FORZAR 32 bits: (long int)ki * bi
+		buf = ((long int) ki * bi) % n;
 		s = static_cast<int>(buf);
 	}
 
@@ -417,7 +421,6 @@ bool tinyECC::verifySig() {
 	int r = Sig[0];
 	int s = Sig[1];
 
-	/* Validar rango de r y s */
 	if (r < 1 || r >= n || s < 1 || s >= n) {
 		return false;
 	}
@@ -425,8 +428,9 @@ bool tinyECC::verifySig() {
 	long int e = m % n;
 	long int w = inverse1(s);
 
-	long int u1 = (e * w) % n;
-	long int u2 = (r * w) % n;
+	// FORZAR 32 bits en ambas multiplicaciones
+	long int u1 = ((long int) e * w) % n;
+	long int u2 = ((long int) r * w) % n;
 
 	/* u1 * Pbase */
 	TempArr[0] = PbaseSer[0];
@@ -453,9 +457,9 @@ bool tinyECC::verifySig() {
 		return false;
 	}
 
-	// CORRECCIÓN CRÍTICA: comparar directamente sin modulo adicional
 	return (P3[0] == r);
 }
+
 /* ==================== Utilidades ==================== */
 int tinyECC::isPAI(int *point) {
 	return ((point[0] == 0) && (point[1] == 0));
@@ -467,7 +471,8 @@ long int tinyECC::inverse(long int num) {
 	}
 	num = num % p;
 	for (int i = 1; i < p; i++) {
-		if (((num * i) % p) == 1) {
+		// FORZAR 32 bits: (long int)num * i
+		if (((long int) num * i) % p == 1) {
 			return i;
 		}
 	}
@@ -481,10 +486,10 @@ int tinyECC::inverse1(int num) {
 	}
 	num = num % static_cast<int>(n);
 	for (int i = 1; i < n; i++) {
-		if (((num * i) % n) == 1) {
+		// FORZAR 32 bits: (long int)num * i
+		if (((long int) num * i) % n == 1) {
 			return i;
 		}
 	}
 	return 0;
 }
-
