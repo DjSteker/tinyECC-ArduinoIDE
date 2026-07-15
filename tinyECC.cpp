@@ -25,7 +25,7 @@
 
 
 
-#include <tinyECC.hpp>
+#include <tinyECC.h>
 
 /* Tabla estática de mapeo */
 static const int alpha_table[MAPPING_TABLE_SIZE] = MAPPING_TABLE_DATA;
