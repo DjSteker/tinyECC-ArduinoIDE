@@ -308,7 +308,6 @@ void tinyECC::sclr_mult(int k, int pt[2]) {
 }
 
 /* ==================== Point Addition ==================== */
-/* ==================== Point Addition ==================== */
 void tinyECC::add(int pt1[2], int pt2[2]) {
 	E[0] = 0;
 	E[1] = 0;
