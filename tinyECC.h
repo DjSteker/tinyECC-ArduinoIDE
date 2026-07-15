@@ -23,55 +23,71 @@
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
 
-#ifndef tinyECC_h
-#define tinyECC_h
 
-#include <tinyECC_mapping_table.h>
+#ifndef TINYECC_HPP_
+#define TINYECC_HPP_
 
+#ifdef ARDUINO
+  #include <Arduino.h>
+#else
+  #include <iostream>
+  #include <string>
+  #include <cstdlib>
+  #include <cstdint>
+#endif
 
-class tinyECC
-{
+#include "tinyECC_mapping_table.hpp"
+
+/* ---------- Tipo de texto portable ---------- */
+#ifdef ARDUINO
+  typedef String ECCString;
+#else
+  typedef std::string ECCString;
+#endif
+
+class tinyECC {
 public:
-static String plaintext;
-static String ciphertext;
-int Sig[2];
+    int a, b, p;
+    
+    ECCString plaintext;
+    ECCString ciphertext;
+    int Sig[2];
 
-tinyECC();
-void encrypt();
-void genSig();
-void decrypt();
-bool verifySig();
+    tinyECC();
+    void encrypt();
+    void genSig();
+    void decrypt();
+    bool verifySig();
 
+    /* Configuración de curva */
+    void setCurve(int aVal, int bVal, int pVal);
+    void setKeys(int privKey, int pubX, int pubY, int baseX, int baseY);
 
 protected:
-static int a;
-static int b;
-static int p;
 
-static int PrivKey;
-static int PubKey[2];
-static int Pbase[2];
-static int PubSer[2];
-static int PbaseSer[2];
-static int TempArr[2];
+    int PrivKey;
+    int PubKey[2];
+    int Pbase[2];
+    int PubSer[2];
+    int PbaseSer[2];
+    int TempArr[2];
+    int E[4];
+    int P[4];
+    int m;
 
-int E[4];
-int P[4];
-int m;
+    void encode(int msg[2], int pb[2], int pbase[2]);
+    void sclr_mult(int k, int pt[2]);
+    void add(int pt1[2], int pt2[2]);
+    int  isPAI(int *point);
+    long int inverse(long int num);
+    int  inverse1(int num);
+    void decode();
 
-void encode(int m[2],int Pb[2],int Pbase[2]);
-
-void sclr_mult(int k,int P[2]);
-void add( int P[2],int Q[2]);
-
-int isPAI(int *point);
-int* getPAI(int *point);
-long int inverse(long int num);
-int inverse1(int num);
-
-void processCipherText();
-void decode();
-    
+private:
+    const int* alphaTable();
+    int  alphaAt(int index);
+    void eccSrand();
 };
 
-#endif
+#endif /* TINYECC_HPP_ */
+
